@@ -1,0 +1,67 @@
+static_resources:
+  listeners:
+    - name: listener_0
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 10000
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: hello_world_service
+                use_remote_address: true
+                skip_xff_append: false
+                  route_config:
+                  response_headers_to_add:
+                    - header:
+                        key: "header_1"
+                        value: "some_value"
+                      # If true (default) it appends the value to existing values,
+                      # otherwise it replaces the existing value
+                      append: false
+                  response_headers_to_remove: "header_we_dont_need"
+                  virtual_hosts:
+                    - name: hello_vhost
+                      request_headers_to_add:
+                        - header:
+                            key: "v_host_header"
+                            value: "from_v_host"
+                      domains: [ "hello.io" ]
+                      routes:
+                        - match:
+                            prefix: "/"
+                          route:
+                            cluster: hello
+                          response_headers_to_add:
+                            - header:
+                                key: "route_header"
+                                value: "%DOWNSTREAM_REMOTE_ADDRESS%"
+                        - match:
+                            prefix: "/api"
+                          route:
+                            cluster: hello_api
+                          response_headers_to_add:
+                            - header:
+                                key: "api_route_header"
+                                value: "api-value"
+                            - header:
+                                key: "header_1"
+                                value: "this_will_be_overwritten"
+                http_filters:
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  clusters:
+    - name: hello_world_service
+      connect_timeout: 5s
+      load_assignment:
+        cluster_name: hello_world_service
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 127.0.0.1
+                      port_value: 8000
