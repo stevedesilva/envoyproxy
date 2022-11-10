@@ -13,7 +13,7 @@ static_resources:
                 stat_prefix: hello_world_service
                 use_remote_address: true
                 skip_xff_append: false
-                  route_config:
+                route_config:
                   response_headers_to_add:
                     - header:
                         key: "header_1"
